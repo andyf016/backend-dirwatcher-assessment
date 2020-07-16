@@ -7,11 +7,13 @@ import datetime
 import os
 import sys
 
+file_dict = {}
+
 exit_flag = False
 
 logger = logging.getLogger(__name__)
 
-# configure logging output
+# configure logging output, thanks Piero!
 logging.basicConfig(
     format='%(asctime)s.%(msecs)03d %(name)-12s \
             %(levelname)-8s [%(threadName)-12s] %(message)s',
@@ -33,16 +35,33 @@ def signal_handler(sig_num, frame):
     """
     global exit_flag
     # log the associated signal name
-    logger.warn('Received ' + signal.Signals(sig_num).name)
+    logger.warning('Received ' + signal.Signals(sig_num).name)
     exit_flag = True
 
 
-def dir_watching(fileName):
-    with open(fileName, 'r') as f:
-        text = f.read()
-        print(text)
+def detect_added_files(file_dict, dir_list):
+    for item in dir_list:
+        if item in file_dict.keys():
+            pass
+        elif os.path.isfile(item) and item.endswith(('.md', '.txt')):
+            logger.info(f'{item} has been found!')
+            file_dict[item] = 0
     return
-    
+
+def detect_removed_files(file_dict, dir_list):
+    for item in file_dict.keys():
+        if item not in dir_list:
+            logger.info(f'{item} has been removed')
+            file_dict.pop(item)
+    return
+
+
+def dir_watching():
+    dir_list = os.listdir()
+    detect_added_files(file_dict, dir_list)
+    detect_removed_files(file_dict, dir_list)
+    print(file_dict)
+    return
 
 
 def create_parser():
@@ -71,6 +90,7 @@ def main(args):
     # set start time
     app_start_time = datetime.datetime.now()
     path = ''.join(name_space.path)
+    # magic_str = ''.join(name_space.magic)
     if not name_space:
         parser.print_usage()
         sys.exit(1)
@@ -88,17 +108,18 @@ def main(args):
         '---------------------------------------------------------------\n'
         )
     while not exit_flag:
-        print(args)
         try:
-            dir_watching(path)
+            dir_watching()
+        except RuntimeError:
+            pass
         except IOError:
             logger.error("Directory or file not found")
         except FileNotFoundError:
             logger.error("Directory or file not found")
-        except Exception as e:
+        #except Exception as e:
             # This is an UNHANDLED exception
-            logger.error(f" {e} What the hell happened!?")
-            pass
+        #    logger.error(f" {e} What the hell happened!?")
+        #    pass
 
         # put a sleep inside my while loop so I don't peg the cpu usage at 100%
         time.sleep(polling_interval)
