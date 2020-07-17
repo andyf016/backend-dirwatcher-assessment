@@ -39,6 +39,18 @@ def signal_handler(sig_num, frame):
     exit_flag = True
 
 
+def scan_single_file(file, magic_word):
+    current_value = file_dict.get(file)
+    with open(file, 'r') as f:
+        line_list = f.readlines()
+        for line in line_list[current_value:]:
+            result = line.find(magic_word)
+            if result != -1:
+                logger.info(f'Found magic string on line \
+                            {line_list.index(line) + 1}')
+        file_dict[file] = current_value + (len(line_list) - current_value)
+        return
+
 def detect_added_files(file_dict, dir_list):
     for item in dir_list:
         if item in file_dict.keys():
@@ -47,6 +59,7 @@ def detect_added_files(file_dict, dir_list):
             logger.info(f'{item} has been found!')
             file_dict[item] = 0
     return
+
 
 def detect_removed_files(file_dict, dir_list):
     for item in file_dict.keys():
@@ -91,15 +104,15 @@ def main(args):
     app_start_time = datetime.datetime.now()
     path = ''.join(name_space.path)
     # magic_str = ''.join(name_space.magic)
-    if not name_space:
-        parser.print_usage()
-        sys.exit(1)
+    # if not name_space:
+    #     parser.print_usage()
+    #     sys.exit(1)
 
     if name_space.interval:
         polling_interval = name_space.interval
     else:
         polling_interval = 5
-
+    # logging banner adapted from Piero's logging demo
     logger.info(
         '\n'
         '---------------------------------------------------------------\n'
