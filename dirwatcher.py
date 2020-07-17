@@ -39,17 +39,17 @@ def signal_handler(sig_num, frame):
     exit_flag = True
 
 
-def scan_single_file(file, magic_word):
-    current_value = file_dict.get(file)
-    with open(file, 'r') as f:
-        line_list = f.readlines()
-        for line in line_list[current_value:]:
-            result = line.find(magic_word)
-            if result != -1:
-                logger.info(f'Found magic string on line \
-                            {line_list.index(line) + 1}')
-        file_dict[file] = current_value + (len(line_list) - current_value)
-        return
+def scan_single_file(magic_word):
+    for key in file_dict.keys():
+        current_value = file_dict.get(key)
+        with open(key, 'r') as f:
+            line_list = f.readlines()
+            for i, line in enumerate(line_list[current_value:]):
+                result = line.find(magic_word)
+                if result != -1:
+                    logger.info(f'Found magic string on line {i + current_value + 1} in {key}')
+            file_dict[key] = current_value + (len(line_list) - current_value)
+    return
 
 def detect_added_files(file_dict, dir_list):
     for item in dir_list:
@@ -84,7 +84,7 @@ def create_parser():
             continually search within all files in the directory for a
             "magic string", which is provided as a command line argument""")
     parser.add_argument('path', nargs='+', type=str, help='directory path to watch')
-    # parser.add_argument('magic', nargs='+', type=str, help='string to watch for')
+    parser.add_argument('magic', nargs='+', type=str, help='string to watch for')
     parser.add_argument('-e', '--ext', help='text file extension to watch')
     parser.add_argument('-i', '--interval', type=int,
                         help='Number of seconds between polling')
@@ -103,6 +103,7 @@ def main(args):
     # set start time
     app_start_time = datetime.datetime.now()
     path = ''.join(name_space.path)
+    magic = ''.join(name_space.magic)
     # magic_str = ''.join(name_space.magic)
     # if not name_space:
     #     parser.print_usage()
@@ -122,7 +123,9 @@ def main(args):
         )
     while not exit_flag:
         try:
+            print(magic)
             dir_watching()
+            scan_single_file(magic)
         except RuntimeError:
             pass
         except IOError:
