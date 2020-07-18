@@ -39,10 +39,12 @@ def signal_handler(sig_num, frame):
     exit_flag = True
 
 
-def scan_single_file(magic_word):
+def scan_single_file(path, magic_word):
+    # os.chdir(path)
     for key in file_dict.keys():
         current_value = file_dict.get(key)
-        with open(key, 'r') as f:
+        key_path = os.path.join(path, key)
+        with open(key_path, 'r') as f:
             line_list = f.readlines()
             for i, line in enumerate(line_list[current_value:]):
                 result = line.find(magic_word)
@@ -51,17 +53,17 @@ def scan_single_file(magic_word):
             file_dict[key] = current_value + (len(line_list) - current_value)
     return
 
-def detect_added_files(file_dict, dir_list):
+def detect_added_files(dir_list, ext):
     for item in dir_list:
         if item in file_dict.keys():
             pass
-        elif os.path.isfile(item) and item.endswith(('.md', '.txt')):
+        elif item.endswith(ext):
             logger.info(f'{item} has been found!')
             file_dict[item] = 0
     return
 
 
-def detect_removed_files(file_dict, dir_list):
+def detect_removed_files(dir_list):
     for item in file_dict.keys():
         if item not in dir_list:
             logger.info(f'{item} has been removed')
@@ -69,10 +71,9 @@ def detect_removed_files(file_dict, dir_list):
     return
 
 
-def dir_watching():
-    dir_list = os.listdir()
-    detect_added_files(file_dict, dir_list)
-    detect_removed_files(file_dict, dir_list)
+def dir_watching(path, dir_list, ext):
+    detect_added_files(dir_list, ext)
+    detect_removed_files(dir_list)
     print(file_dict)
     return
 
@@ -102,13 +103,15 @@ def main(args):
 
     # set start time
     app_start_time = datetime.datetime.now()
-    path = ''.join(name_space.path)
+    
+    # set path name and magic string variable
+    path = ''.join(name_space.path) 
     magic = ''.join(name_space.magic)
-    # magic_str = ''.join(name_space.magic)
-    # if not name_space:
-    #     parser.print_usage()
-    #     sys.exit(1)
-
+    if name_space.ext:
+        ext = name_space.ext
+    else:
+        ext = ('.md', '.txt')
+    # set polling interval, defaults to 5 seconds
     if name_space.interval:
         polling_interval = name_space.interval
     else:
@@ -118,27 +121,29 @@ def main(args):
         '\n'
         '---------------------------------------------------------------\n'
         f'      Running{__file__}\n'
+        f'      In: {path}                                              \n'
         f'      Started on {app_start_time.isoformat()}\n'
         '---------------------------------------------------------------\n'
         )
     while not exit_flag:
         try:
-            print(magic)
-            dir_watching()
-            scan_single_file(magic)
+            dir_list = os.listdir(path=path)    
+            dir_watching(path, dir_list, ext)
+            scan_single_file(path, magic)
         except RuntimeError:
             pass
         except IOError:
             logger.error("Directory or file not found")
         except FileNotFoundError:
             logger.error("Directory or file not found")
-        #except Exception as e:
+        except Exception as e:
             # This is an UNHANDLED exception
-        #    logger.error(f" {e} What the hell happened!?")
-        #    pass
+            logger.error(f" {e} What happened!?")
+            pass
 
         # put a sleep inside my while loop so I don't peg the cpu usage at 100%
         time.sleep(polling_interval)
+    # set uptime
     uptime = datetime.datetime.now() - app_start_time
     logger.info(
         '\n'
@@ -148,9 +153,7 @@ def main(args):
         '-------------------------------------------------------------------\n'
         )
 
-    # final exit point happens here
-    # Log a message that we are shutting down
-    # Include the overall uptime since program start
+
 
 
 if __name__ == '__main__':
