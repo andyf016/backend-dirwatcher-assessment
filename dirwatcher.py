@@ -27,11 +27,11 @@ logger.setLevel(logging.DEBUG)
 
 def signal_handler(sig_num, frame):
     """
-    This is a handler for SIGTERM and SIGINT. Other signals can be mapped here as well (SIGHUP?)
-    Basically, it just sets a global flag, and main() will exit its loop if the signal is trapped.
-    :param sig_num: The integer signal number that was trapped from the OS.
-    :param frame: Not used
-    :return None
+    This is a handler for SIGTERM and SIGINT. Other signals can be mapped
+    here as well (SIGHUP?) Basically, it just sets a global flag, and
+    main() will exit its loop if the signal is trapped. :param sig_num:
+    The integer signal number that was trapped from the OS. :param frame:
+    Not used :return None
     """
     global exit_flag
     # log the associated signal name
@@ -40,7 +40,11 @@ def signal_handler(sig_num, frame):
 
 
 def scan_single_file(path, magic_word):
-    # os.chdir(path)
+    """
+    scans each file in the dictionary of files for the magic string
+    and then keeps track of the last line read by updating the value
+    of the document in the dictionary
+    """
     for key in file_dict.keys():
         current_value = file_dict.get(key)
         key_path = os.path.join(path, key)
@@ -49,11 +53,18 @@ def scan_single_file(path, magic_word):
             for i, line in enumerate(line_list[current_value:]):
                 result = line.find(magic_word)
                 if result != -1:
-                    logger.info(f'Found magic string on line {i + current_value + 1} in {key}')
+                    logger.info(f"""Found magic string on line
+                                {i + current_value + 1} in {key}""")
             file_dict[key] = current_value + (len(line_list) - current_value)
     return
 
+
 def detect_added_files(dir_list, ext):
+    """
+    Scans list of items in directory and compares them to the current
+    dictionary of files adding items that are not on the list and have
+    the correct extension
+    """
     for item in dir_list:
         if item in file_dict.keys():
             pass
@@ -64,6 +75,11 @@ def detect_added_files(dir_list, ext):
 
 
 def detect_removed_files(dir_list):
+    """
+    Compares items in a list of keys of the current file dictionary
+    with items in the updated file list and removes keys that are not
+    on the updated list.
+    """
     for item in file_dict.keys():
         if item not in dir_list:
             logger.info(f'{item} has been removed')
@@ -72,9 +88,13 @@ def detect_removed_files(dir_list):
 
 
 def dir_watching(path, dir_list, ext):
+    """
+    watches the given directory by implementing the two detect functions
+    passes these functions the path, updated directory list and the
+    extension to search for
+    """
     detect_added_files(dir_list, ext)
     detect_removed_files(dir_list)
-    print(file_dict)
     return
 
 
@@ -84,15 +104,22 @@ def create_parser():
             that are created within the monitored directory and will
             continually search within all files in the directory for a
             "magic string", which is provided as a command line argument""")
-    parser.add_argument('path', nargs='+', type=str, help='directory path to watch')
-    parser.add_argument('magic', nargs='+', type=str, help='string to watch for')
-    parser.add_argument('-e', '--ext', help='text file extension to watch')
+    parser.add_argument('path', nargs='+', type=str,
+                        help='directory path to watch')
+    parser.add_argument('magic', nargs='+', type=str,
+                        help='string to watch for')
+    parser.add_argument('-e', '--ext',
+                        help='file extension to watch')
     parser.add_argument('-i', '--interval', type=int,
                         help='Number of seconds between polling')
     return parser
 
 
 def main(args):
+    """
+    Main function, contains banners for beginning and end of run
+    contains the try except process and the polling interval
+    """
     parser = create_parser()
     name_space = parser.parse_args(args)
     # Hook into these two signals from the OS
@@ -103,10 +130,10 @@ def main(args):
 
     # set start time
     app_start_time = datetime.datetime.now()
-    
-    # set path name and magic string variable
-    path = ''.join(name_space.path) 
+    # set path name and magic string
+    path = ''.join(name_space.path)
     magic = ''.join(name_space.magic)
+    # set extension and default if none is provided
     if name_space.ext:
         ext = name_space.ext
     else:
@@ -127,10 +154,12 @@ def main(args):
         )
     while not exit_flag:
         try:
-            dir_list = os.listdir(path=path)    
+            dir_list = os.listdir(path=path)
             dir_watching(path, dir_list, ext)
             scan_single_file(path, magic)
         except RuntimeError:
+            # This error was coming up when the file dict was modified
+            # Specifically the dictionary changing size during iteration.
             pass
         except IOError:
             logger.error("Directory or file not found")
@@ -139,8 +168,6 @@ def main(args):
         except Exception as e:
             # This is an UNHANDLED exception
             logger.error(f" {e} What happened!?")
-            pass
-
         # put a sleep inside my while loop so I don't peg the cpu usage at 100%
         time.sleep(polling_interval)
     # set uptime
@@ -152,8 +179,6 @@ def main(args):
         f'      Uptime was {str(uptime)}\n'
         '-------------------------------------------------------------------\n'
         )
-
-
 
 
 if __name__ == '__main__':
