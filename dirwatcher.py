@@ -74,6 +74,7 @@ def detect_added_files(dir_list, ext):
     return
 
 
+
 def detect_removed_files(dir_list):
     """
     Compares items in a list of keys of the current file dictionary
@@ -162,7 +163,16 @@ def main(args):
             # Specifically the dictionary changing size during iteration.
             pass
         except IOError:
-            logger.error("Directory or file not found")
+            logger.error(" IO Error Directory or file not found")
+            # This nested try/except statement is to catch when
+            # a directory has been removed and alert the user that
+            # the watched files in the directory have been deleted
+            # as is implied when a directory is deleted
+            try:
+                dir_list.clear()
+                detect_removed_files(dir_list)
+            except Exception:
+                pass
         except FileNotFoundError:
             logger.error("Directory or file not found")
         except Exception as e:
