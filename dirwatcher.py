@@ -36,6 +36,7 @@ def signal_handler(sig_num, frame):
     global exit_flag
     # log the associated signal name
     logger.warning('Received ' + signal.Signals(sig_num).name)
+    logger.info('Exiting very gracefully')
     exit_flag = True
 
 
@@ -53,8 +54,8 @@ def scan_single_file(path, magic_word):
             for i, line in enumerate(line_list[current_value:]):
                 result = line.find(magic_word)
                 if result != -1:
-                    logger.info(f"""Found magic string on line
-                                {i + current_value + 1} in {key}""")
+                    logger.info("Found magic string on line "
+                                f"{i + current_value + 1} in {key}")
             file_dict[key] = current_value + (len(line_list) - current_value)
     return
 
@@ -72,7 +73,6 @@ def detect_added_files(dir_list, ext):
             logger.info(f'{item} has been found!')
             file_dict[item] = 0
     return
-
 
 
 def detect_removed_files(dir_list):
@@ -163,7 +163,7 @@ def main(args):
             # Specifically the dictionary changing size during iteration.
             pass
         except IOError:
-            logger.error(" IO Error Directory or file not found")
+            logger.error("Directory or file not found")
             # This nested try/except statement is to catch when
             # a directory has been removed and alert the user that
             # the watched files in the directory have been deleted
